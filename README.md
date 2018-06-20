@@ -30,3 +30,7 @@ Useful markov chain. Pass `-phelpme` to display help. Stores all data in memory 
 
 ## lib/libmarkovSqlBackend.so
 Useful markov chain. Pass `-phelpme` to display help. Stores all data in MySQL (you need server).
+## lib/libmarkovSQLite.so
+Useful markov chain. Pass `-phelpme` to display help. Stores all data in SQLite3 database.
+
+It is most advanced backend: it use extra dictionary table to store all possible text fragments, and main table only store its `rowid`'s. Different data sets can share one dictionary table (it is universal). Also, it is fastest one and by default work in memory. I strongly recommend to use this one.
