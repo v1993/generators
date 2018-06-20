@@ -35,6 +35,7 @@ namespace markov {
 	class markovBackend: public generatorAPI {
 		public:
 			void init(std::vector<std::string>);
+			void trainBegin(std::vector<std::shared_ptr<std::ifstream>>) {};
 			boost::any train(std::shared_ptr<std::ifstream>);
 			boost::any merge(std::vector<boost::any>&);
 			void out(boost::any&, std::shared_ptr<std::ostream>);

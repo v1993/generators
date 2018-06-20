@@ -130,7 +130,7 @@ namespace markov {
 			("mysql_passwd", po::value<std::string>()->required(), "mySQL password")
 			("mysql_database", po::value<std::string>()->required(), "mySQL database")
 			("mysql_table", po::value<std::string>()->required(), "mySQL table")
-			("mysql_index", po::value<unsigned int>()->default_value(0), "count of indexed chars (no or 0 means no index, which pretty bad)")
+			("mysql_index", po::value<unsigned int>()->default_value(0), "count of indexed chars (no or 0 means no index, which is pretty bad)")
 			("mysql_transactions", po::value<bool>()->default_value(false), "use transactions or not (NOTE: true for 100.000+ blocks per file is good)");
 		if (opts.front() == "helpme") {
 			std::cout << "Due to restrictions of boost::program_options, options prints in cmd format." << std::endl
@@ -272,7 +272,7 @@ namespace markov {
 				vec.push_back("str"+std::to_string(i)+"("+std::to_string(mysql_index)+")"); // All "base" strings
 			}
 			std::unique_ptr<sql::Statement> stm(con->createStatement());
-			std::cout << "Creating index, it may took some time... ";
+			std::cout << "Creating index, it may take some time... ";
 			stm->execute("CREATE INDEX markov ON "+mysql_table+"("+joinStr(vec, ", ")+");");
 			std::cout << "done!" << std::endl;
 		}

@@ -25,10 +25,10 @@
 struct cacheop {
 	explicit cacheop(std::string const& val):
 		value(val)
-	{ }
+		{ }
 	operator std::string() const { return value; }
 	std::string value;
-};
+	};
 
 struct opts {
 	opts(): cache("") {}
@@ -41,6 +41,7 @@ struct opts {
 	std::string cachefile = "";
 	std::vector<std::shared_ptr<std::ifstream>> inpfiles;
 	std::map<std::shared_ptr<std::ifstream>, std::string> inpfiles_names;
-};
+	};
 
 #endif
+// kate: indent-mode cstyle; indent-width 4; replace-tabs off; tab-width 4; 

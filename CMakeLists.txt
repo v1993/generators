@@ -1,3 +1,6 @@
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+set(CMAKE_BUILD_TYPE Debug)
+
 cmake_minimum_required(VERSION 3.1)
 project(Generators)
 
@@ -22,3 +25,5 @@ add_subdirectory(markov) # Markov chain backnd (usable one)
 
 add_subdirectory(markovSql)
 add_subdirectory(markovSQLClient)
+
+add_subdirectory(markovSQLite3)
