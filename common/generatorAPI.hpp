@@ -1,5 +1,3 @@
-#ifndef GENERATOR_API_H
-#define GENERATOR_API_H
 #pragma once
 
 #include <iostream>
@@ -26,7 +24,5 @@ class generatorAPI {
 		virtual boost::any load(std::string) = 0; // Arguments: filename to load from
 		virtual void save(std::string, boost::any&) = 0; // Arguments: filename to save to, data from `merge`
 	};
-
-#endif
 
 // kate: indent-mode cstyle; indent-width 4; replace-tabs off; tab-width 4; 

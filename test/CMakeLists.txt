@@ -1,8 +1,7 @@
+set (CMAKE_CXX_STANDARD 17)
 add_library(testBackend SHARED
 	test.cpp
 )
-
-# No boost needed
 
 target_include_directories(testBackend PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(testBackend ${CMAKE_THREAD_LIBS_INIT})

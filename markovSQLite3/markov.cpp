@@ -1,9 +1,12 @@
 #include "interface.hpp"
 #include <streambuf>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 #include <boost/dll/alias.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 
 namespace po = boost::program_options;
 
@@ -50,7 +53,9 @@ namespace markov {
 
 	std::string configString(std::string param, po::variables_map vm) {
 		std::string str = mathConfigStr(param, vm[param].as<std::string>(), boost::regex("\"(.*)\""))[1]; // String must be in ""
-		auto fail = [param]() {throw std::invalid_argument("Invalid escape sequence in config param "+param);};
+		auto fail = [param]() {
+			throw std::invalid_argument("Invalid escape sequence in config param "+param);
+			};
 		auto it = str.begin();
 		std::string res;
 		while (it != str.end()) {
@@ -58,14 +63,30 @@ namespace markov {
 				if (c == '\\' and it != str.end()) {
 						char c2 = *it++;
 						switch (c2) {
-								case '\\': c = '\\'; break;
-								case 'a': c = '\a'; break;
-								case 'b': c = '\b'; break;
-								case 'f': c = '\f'; break;
-								case 'n': c = '\n'; break;
-								case 'r': c = '\r'; break;
-								case 't': c = '\t'; break;
-								case 'v': c = '\v'; break;
+								case '\\':
+									c = '\\';
+									break;
+								case 'a':
+									c = '\a';
+									break;
+								case 'b':
+									c = '\b';
+									break;
+								case 'f':
+									c = '\f';
+									break;
+								case 'n':
+									c = '\n';
+									break;
+								case 'r':
+									c = '\r';
+									break;
+								case 't':
+									c = '\t';
+									break;
+								case 'v':
+									c = '\v';
+									break;
 								default: // All advanced cases
 									if (c2 >= '0' and c2 <= '7' and it != str.end()) { // 8-based number
 											char c3 = *it++;
@@ -87,7 +108,9 @@ namespace markov {
 													}
 											}
 									else if (c2 == 'x' and it != str.end()) {
-											auto checkHex = [](char c) { return ((c >= '0' and c <= '9') or (c >= 'a' and c <= 'f') or (c >= 'A' and c <= 'F')); };
+											auto checkHex = [](char c) {
+												return ((c >= '0' and c <= '9') or (c >= 'a' and c <= 'f') or (c >= 'A' and c <= 'F'));
+												};
 											char c3 = *it++;
 											if (checkHex(c3) and it != str.end()) {
 													char c4 = *it++;
@@ -115,17 +138,30 @@ namespace markov {
 
 	std::unique_ptr<sqlite::database> markovBackend::connect() {
 		sqlite::sqlite_config conf;
-		conf.flags = sqlite::OpenFlags::READWRITE | sqlite::OpenFlags::CREATE | sqlite::OpenFlags::NOMUTEX | sqlite::OpenFlags::URI;
+		conf.flags = sqlite::OpenFlags::READWRITE | sqlite::OpenFlags::CREATE | sqlite::OpenFlags::NOMUTEX | sqlite::OpenFlags::SHAREDCACHE | sqlite::OpenFlags::URI;
 		conf.encoding = sqlite::Encoding::UTF8; // Fuck UTF16, use UTF8!
 		auto db = std::make_unique<sqlite::database>(database_uri, conf);
-		*db << "PRAGMA busy_timeout = 60000;"; // One minute should be enough for good configuration
 		*db << "PRAGMA synchronous = 0;"; // Our db isn't critical
 		*db << "PRAGMA journal_mode = MEMORY;";
+		auto busy = [](void *, int count) {
+			unsigned long time = 1000;
+			unsigned long tick = 1;
+			if (count < time/tick) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(tick));
+				return 1;
+			} else {
+				std::cout << "Терпение кончилось!" << std::endl;
+				return 0;
+			}
+		};
+		sqlite3_busy_handler(&*db->connection(), busy, nullptr);
 		return db;
 		}
 
 	void markovBackend::init(std::vector<std::string> opts) { // TODO: add more foolproof
-		if (opts.size() != 1) {throw std::invalid_argument("You should give only config file name to markov backend (via backend-opts) or helpme to display help");};
+		if (opts.size() != 1) {
+				throw std::invalid_argument("You should give only config file name to markov backend (via backend-opts) or helpme to display help");
+				};
 		po::options_description config("Config file");
 		config.add_options()
 		("iter", po::value<std::string>()->required(), "iterator (to select block, regex)")
@@ -135,7 +171,7 @@ namespace markov {
 		("maxgen", po::value<unsigned long long int>()->required(), "do not print more than maxgen block  (zero to no limit)")
 		("rndstart", po::value<bool>()->default_value(false, "false"), "start from random combination")
 		("separator", po::value<std::string>(), "block separator (regex)")
-		("database_uri", po::value<std::string>()->default_value("\"file:memdb1?mode=memory&cache=shared\""), "valid URI to sqlite database, using `?cache=shared` is recommended")
+		("database_uri", po::value<std::string>()->default_value("\"file:memdb1?mode=memory\""), "valid URI to sqlite database, using `?cache=shared` is recommended")
 		("sqlite_table", po::value<std::string>()->required(), "main SQLite3 table")
 		("sqlite_table_dict", po::value<std::string>()->required(), "dictionary SQLite3 table")
 		("sqlite_index", po::value<bool>()->default_value(false), "use index or not (it is recommended )");
@@ -179,42 +215,42 @@ namespace markov {
 
 			sqlite_insert_dict = "INSERT INTO "+sqlite_table_dict+" (str) VALUES(?);";
 			if (sqlite_index) {
-				dict_idx_name = sqlite_table_dict+"_index";
-				table_idx_name = sqlite_table+"_index";
-				}
+					dict_idx_name = sqlite_table_dict+"_index";
+					table_idx_name = sqlite_table+"_index";
+					}
 			}
-		
+
 		mainConnection = connect();
 		std::cout << "Connect OK!" << std::endl;
 		};
-		
+
 	rowid_t markovBackend::dictID(const std::string& str, sqlite::database& db) {
 		rowid_t id = 0;
 		db << "SELECT rowid FROM "+sqlite_table_dict+" WHERE str=? LIMIT 1;"
-		<< str
-		>> id;
+		   << str
+		   >> id;
 		return id;
-	};
-	
+		};
+
 	std::string markovBackend::dictStr(const markov::rowid_t& id, sqlite::database& db) {
 		std::string str = "";
 		db << "SELECT str FROM "+sqlite_table_dict+" WHERE rowid=? LIMIT 1;"
-		<< id
-		>> str;
+		   << id
+		   >> str;
 		return str;
-	};
-	
+		};
+
 	void markovBackend::trainBegin(std::vector<std::shared_ptr<std::ifstream>> arr) {
 		auto&& db = *mainConnection;
 		db << "CREATE TABLE IF NOT EXISTS "+sqlite_table_dict+" (id INTEGER PRIMARY KEY ASC, str TEXT NOT NULL UNIQUE ON CONFLICT IGNORE);"; // id is only for human redactors via SqliteBrowser
 		db << "INSERT INTO "+sqlite_table_dict+"(rowid, str) VALUES(?, ?);" << 0 << ""; // Special value
-		{
+			{
 			std::vector<std::string> vec = {"rstr INTEGER NOT NULL"};
 			for (unsigned int i = 1; i <= N; ++i) {
-				vec.push_back("str"+std::to_string(i)+" INTEGER NOT NULL"); // All "base" strings
-			}
+					vec.push_back("str"+std::to_string(i)+" INTEGER NOT NULL"); // All "base" strings
+					}
 			db << "CREATE TABLE IF NOT EXISTS "+sqlite_table+" ("+joinStr(vec, ", ")+");";
-		}
+			}
 		if (sqlite_index) {
 				db << "DROP INDEX IF EXISTS "+dict_idx_name+";";
 				db << "DROP INDEX IF EXISTS "+table_idx_name+";";
@@ -225,10 +261,10 @@ namespace markov {
 		auto dictAdd = [&pstm](std::string str, bool) {
 			pstm << str;
 			pstm++;
-		};
+			};
 		for (auto& file: arr) {
-			trainFile(file, dictAdd);
-		};
+				trainFile(file, dictAdd);
+				};
 		db << "commit;";
 		std::cout << "done!" << std::endl;
 		if (sqlite_index) {
@@ -236,10 +272,10 @@ namespace markov {
 				db << "CREATE INDEX "+dict_idx_name+" ON "+sqlite_table_dict+" (str);";
 				std::cout << "done!" << std::endl;
 				}
-	};
-		
+		};
+
 	void markovBackend::trainFile(std::shared_ptr<std::ifstream> file, std::function<void(const std::string&, const bool&)> func) {
-			std::string content;
+		std::string content;
 			{
 			file->seekg(0, std::ios::end);
 			content.reserve(file->tellg());
@@ -259,7 +295,7 @@ namespace markov {
 					trainPart(content, func);
 					}
 			}
-	}
+		}
 
 	void markovBackend::trainPart(const std::string& data, std::function<void(const std::string&, const bool&)> func) {
 		if (splitstr) {
@@ -300,9 +336,9 @@ namespace markov {
 		auto func = [&db, &pstm, &dq, this](const std::string& str, bool reset) {
 			trainInsert(str, *db, pstm, dq);
 			if (reset) {
-				dq = MarkovDeque(N, 0);
-			}
-		};
+					dq = MarkovDeque(N, 0);
+				}
+			};
 		trainFile(file, func);
 		*db << "commit;";
 		file->close();
@@ -313,14 +349,14 @@ namespace markov {
 	boost::any markovBackend::merge(std::vector<boost::any>&) {
 		auto&& db = *mainConnection;
 		if (sqlite_index) {
-			std::cout << "Building data index (it can take some time)… ";
-			std::vector<std::string> vec;
-			for (unsigned i = 1; i <= N; i++) {
-				vec.push_back("str"+std::to_string(i));
-			}
-			db << "CREATE INDEX "+table_idx_name+" ON "+sqlite_table+" ("+joinStr(vec, ", ")+");";
-			std::cout << "done!" << std::endl;
-		};
+				std::cout << "Building data index (it can take some time)… ";
+				std::vector<std::string> vec;
+				for (unsigned i = 1; i <= N; i++) {
+						vec.push_back("str"+std::to_string(i));
+						}
+				db << "CREATE INDEX "+table_idx_name+" ON "+sqlite_table+" ("+joinStr(vec, ", ")+");";
+				std::cout << "done!" << std::endl;
+				};
 		return true;
 		};
 
@@ -330,10 +366,11 @@ namespace markov {
 		MarkovDeque dq;
 		if (rndstart) {
 				dq = MarkovDeque(N);
-				for(auto &&row : db << "SELECT * FROM "+sqlite_table+" ORDER BY RANDOM() LIMIT 1;") {
-					for (unsigned int i = 0; i < N; ++i) row >> dq[i];
-				};
-		} else {
+				for (auto &&row : db << "SELECT * FROM "+sqlite_table+" ORDER BY RANDOM() LIMIT 1;") {
+						for (unsigned int i = 0; i < N; ++i) row >> dq[i];
+						};
+				}
+		else {
 				dq = MarkovDeque(N, 0);
 				}
 		rowid_t res = outGet(pstm, dq);
@@ -341,9 +378,13 @@ namespace markov {
 		while (res != 0) {
 				std::string str = dictStr(res, db);
 				(*o) << str;
-				if (str != "\n") { (*o) << prefixmiddle; };
+				if (str != "\n") {
+						(*o) << prefixmiddle;
+						};
 				if (maxgen > 0) {
-						if (++n == maxgen) { return; }; // We reached limit
+						if (++n == maxgen) {
+								return;
+								}; // We reached limit
 						}
 				shiftDeque(dq, res);
 				res = outGet(pstm, dq);
