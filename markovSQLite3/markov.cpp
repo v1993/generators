@@ -157,7 +157,7 @@ namespace markov {
 		("maxgen", po::value<unsigned long long int>()->required(), "do not print more than maxgen block  (zero to no limit)")
 		("rndstart", po::value<bool>()->default_value(false, "false"), "start from random combination")
 		("separator", po::value<std::string>(), "block separator (regex)")
-		("database_uri", po::value<std::string>()->default_value("\"file:memdb1?mode=memory\""), "valid URI to sqlite database, using `?cache=shared` is recommended")
+		("database_uri", po::value<std::string>()->default_value("\"file:memdb1?mode=memory\""), "valid URI to sqlite database")
 		("sqlite_table", po::value<std::string>()->required(), "main SQLite3 table")
 		("sqlite_table_dict", po::value<std::string>()->required(), "dictionary SQLite3 table")
 		("sqlite_index", po::value<bool>()->default_value(false), "use index or not (it is recommended )");
