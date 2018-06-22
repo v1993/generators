@@ -6,6 +6,7 @@
 #include <deque>
 #include <utility>
 #include <boost/regex.hpp>
+#include <mutex>
 
 template <typename Container> // we can make this generic for any container
 struct container_hash {
@@ -31,6 +32,7 @@ namespace markov {
 			void save(std::string fname, boost::any& data);
 
 		private:
+			std::mutex mutex;
 			void trainFile(std::shared_ptr<std::ifstream>, std::function<void(const std::string&, const bool&)>);
 			void trainPart(const std::string&, std::function<void(const std::string&, const bool&)>);
 			void trainFinal(const std::string&, std::function<void(const std::string&, const bool&)>);

@@ -1,8 +1,6 @@
 #include "interface.hpp"
 #include <streambuf>
 #include <algorithm>
-#include <chrono>
-#include <thread>
 #include <boost/dll/alias.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
@@ -143,18 +141,6 @@ namespace markov {
 		auto db = std::make_unique<sqlite::database>(database_uri, conf);
 		*db << "PRAGMA synchronous = 0;"; // Our db isn't critical
 		*db << "PRAGMA journal_mode = MEMORY;";
-		auto busy = [](void *, int count) {
-			unsigned long time = 1000;
-			unsigned long tick = 1;
-			if (count < time/tick) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(tick));
-				return 1;
-			} else {
-				std::cout << "Терпение кончилось!" << std::endl;
-				return 0;
-			}
-		};
-		sqlite3_busy_handler(&*db->connection(), busy, nullptr);
 		return db;
 		}
 
@@ -329,6 +315,10 @@ namespace markov {
 		}
 
 	boost::any markovBackend::train(std::shared_ptr<std::ifstream> file) {
+		if (not mutex.try_lock()) {
+			std::cerr << "Error: NEVER use multithreading with SQLite3 backend";
+			std::terminate();
+		}
 		auto db = connect();
 		*db << "begin;";
 		auto pstm = *db << sqlite_insert;
@@ -342,6 +332,7 @@ namespace markov {
 		trainFile(file, func);
 		*db << "commit;";
 		file->close();
+		mutex.unlock();
 
 		return true;
 		};
