@@ -5,7 +5,7 @@ Common purpose of this system - generating new sequences based on old ones. Its 
 3. Cache - API implements simple save/load functions + append mode from cmd.
 
 # Note
-I created this project for my own needs. Yes, I know that it have got some problems, like constant `mysqlconnector` library place, but I will not improve it until something changes (in case of constant place, `Find` module appears).
+I created this project for my own needs. You can send issues, but probably they will be ignored.
 
 # Building
     mkdir build
