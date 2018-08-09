@@ -358,6 +358,8 @@ namespace markov {
 		if (rndstart) {
 				dq = MarkovDeque(N);
 				for (auto &&row : db << "SELECT * FROM "+sqlite_table+" ORDER BY RANDOM() LIMIT 1;") {
+						rowid_t id;
+						row >> id;
 						for (unsigned int i = 0; i < N; ++i) row >> dq[i];
 						};
 				}
