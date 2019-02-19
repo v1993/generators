@@ -163,7 +163,7 @@ namespace markov {
 		("sqlite_index", po::value<bool>()->default_value(false), "use index or not (it is recommended )");
 		if (opts.front() == "helpme") {
 				std::cout << "Due to restrictions of boost::program_options, options prints in cmd format." << std::endl
-						  << "Actual format is ini-like `opt=val`. All strings must be placed into \"\" and most of C escapes (`\\n` for example) will be applied to them."
+						  << "Actual format is ini-like `opt=val`. All strings must be placed into \"\" and most of C escapes (`\\n` for example) will be applied to them." << std::endl
 						  << config << std::endl;
 				exit(EXIT_SUCCESS);
 				};
